@@ -19,15 +19,15 @@ GoMailSim is an SMTP server simulator for development, inspired by Mailpit. It a
 ### Via Go Install
 
 ```bash
-go install github.com/yourusername/gomailsim@latest
+go install github.com/herculano-cn/go-mail-sim/cmd/gomailsim@latest
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/gomailsim.git
-cd gomailsim
-go build -o gomailsim
+git clone https://github.com/herculano-cn/go-mail-sim.git
+cd go-mail-sim
+go build -o gomailsim cmd/gomailsim/main.go
 ```
 
 ## Usage
@@ -56,7 +56,7 @@ You can also use GoMailSim as a package in your Go applications:
 package main
 
 import (
-    "github.com/yourusername/gomailsim/server"
+    "github.com/herculano-cn/go-mail-sim/server"
     "time"
 )
 
