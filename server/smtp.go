@@ -64,24 +64,33 @@ func (s *smtpServerImpl) handleConnection(conn net.Conn) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(strings.ToUpper(line), "MAIL FROM:") {
+		cmd := strings.ToUpper(line)
+
+		if strings.HasPrefix(cmd, "MAIL FROM:") {
 			from = strings.TrimPrefix(line, "MAIL FROM:")
 			from = strings.TrimSpace(from)
 			conn.Write([]byte("250 Sender OK\r\n"))
-		} else if strings.HasPrefix(strings.ToUpper(line), "RCPT TO:") {
+		} else if strings.HasPrefix(cmd, "RCPT TO:") {
 			recipient := strings.TrimPrefix(line, "RCPT TO:")
 			recipient = strings.TrimSpace(recipient)
 			to = append(to, recipient)
 			conn.Write([]byte("250 Recipient OK\r\n"))
-		} else if strings.HasPrefix(strings.ToUpper(line), "DATA") {
+		} else if cmd == "DATA" {
 			conn.Write([]byte("354 Start mail input; end with <CRLF>.<CRLF>\r\n"))
+
+			// Read the email data until we see a line with just a period
 			for scanner.Scan() {
 				line := scanner.Text()
 				if line == "." {
 					break
 				}
+				// Remove the leading dot if present (SMTP data escaping)
+				if strings.HasPrefix(line, ".") {
+					line = line[1:]
+				}
 				data.WriteString(line + "\r\n")
 			}
+
 			conn.Write([]byte("250 Mail accepted\r\n"))
 
 			// Extract subject and body from email data
@@ -125,10 +134,24 @@ func (s *smtpServerImpl) handleConnection(conn net.Conn) {
 			from = ""
 			to = nil
 			data.Reset()
-		} else if strings.HasPrefix(strings.ToUpper(line), "QUIT") {
+		} else if cmd == "QUIT" {
 			conn.Write([]byte("221 Bye\r\n"))
 			return
+		} else if cmd == "HELO" || cmd == "EHLO" {
+			// Handle HELO/EHLO commands
+			conn.Write([]byte("250 Hello\r\n"))
+		} else if cmd == "RSET" {
+			// Reset the current transaction
+			from = ""
+			to = nil
+			data.Reset()
+			conn.Write([]byte("250 OK\r\n"))
+		} else if cmd == "NOOP" {
+			// Do nothing
+			conn.Write([]byte("250 OK\r\n"))
 		} else {
+			// Log unknown commands for debugging
+			log.Printf("Unknown SMTP command: %s", line)
 			conn.Write([]byte("500 Unknown command\r\n"))
 		}
 	}
